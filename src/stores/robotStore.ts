@@ -1,7 +1,7 @@
 // src/stores/robotStore.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { mockSocket, type RobotData } from '@/utils/mockSocket'
+import { mockSocket, type RobotData } from '@/api/mockSocket'
 import { useHistoryStore } from '@/stores/historyStore' // 保留A项目的历史记录
 import { ElNotification, ElMessage } from 'element-plus'
 

@@ -473,7 +473,7 @@ import { SuccessFilled } from '@element-plus/icons-vue'
 import Hls from 'hls.js' // 引入HLS解析库
 import { useRobotStore } from '@/stores/robotStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import type { RobotData } from '@/utils/mockSocket'
+import type { RobotData } from '@/api/mockSocket'
 import GaugeBoard from '@/components/charts/GaugeBoard.vue'
 import SensorChart from '@/components/charts/SensorChart.vue'
 
