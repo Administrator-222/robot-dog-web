@@ -10,7 +10,7 @@
           <template #header>
             <div class="card-header">
               <span class="title">
-                <el-icon><List /></el-icon> AI 任务序列模板库
+                <el-icon><List /></el-icon> 自定义任务序列模板库
               </span>
               <el-button type="primary" size="small" @click="handleCreate">
                 <el-icon><Plus /></el-icon> 新建任务模板

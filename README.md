@@ -49,34 +49,34 @@
 
 src/
 ├── api/
-│   └── mockSocket.ts    # 模拟WebSocket
-├── components/           # 可复用组件
-│   ├── charts/          # 图表组件
-│   │   ├── EnvCard.vue
-│   │   ├── GaugeBoard.vue    # 仪表盘
-│   │   └── SensorChart.vue   # 传感器图表
-│   └── control/         # 控制组件
-│       └──PathMap.vue       # 路径地图
+│ └── mockSocket.ts # 模拟WebSocket
+├── components/ # 可复用组件
+│ ├── charts/ # 图表组件
+│ │ ├── EnvCard.vue
+│ │ ├── GaugeBoard.vue # 仪表盘
+│ │ └── SensorChart.vue # 传感器图表
+│ └── control/ # 控制组件
+│ └── PathMap.vue # 路径地图
 │
-├── views/               # 页面组件
-│   ├── Dashboard.vue    # 仪表盘/实时监控
-│   ├── TaskControl.vue  # 任务控制页面
-│   ├── HistoryView.vue  # 历史数据页面
-│   └── Login.vue        # 登录页面
-├── stores/              # 状态管理
-│   ├── authStore.ts     # 认证状态
-│   ├── robotStore.ts    # 机器狗状态
-│   └── historyStore.ts  # 历史数据状态
-├── router/              # 路由配置
-│   └── index.ts
-├── utils/               # 工具函数
-│   ├── exportUtils.ts   # 导出工具
-│   └── errorHandler.ts  # 错误处理
-└── styles/              # 全局样式
-│   └── responsive.css   # 响应式样式
+├── views/ # 页面组件
+│ ├── Dashboard.vue # 仪表盘/实时监控
+│ ├── TaskControl.vue # 任务控制页面
+│ ├── HistoryView.vue # 历史数据页面
+│ └── Login.vue # 登录页面
+├── stores/ # 状态管理
+│ ├── authStore.ts # 认证状态
+│ ├── robotStore.ts # 机器狗状态
+│ └── historyStore.ts # 历史数据状态
+├── router/ # 路由配置
+│ └── index.ts
+├── utils/ # 工具函数
+│ ├── exportUtils.ts # 导出工具
+│ └── errorHandler.ts # 错误处理
+└── styles/ # 全局样式
+│ └── responsive.css # 响应式样式
 ├── layouts/
-│   └── MainLayout.vue   # 主布局
-├── App.vue              # 应用入口
+│ └── MainLayout.vue # 主布局
+├── App.vue # 应用入口
 └── main.ts
 
 
