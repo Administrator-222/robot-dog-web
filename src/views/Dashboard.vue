@@ -324,7 +324,7 @@
       </div>
     </el-card>
 
-    <!-- 第四行：导航数据和视频 -->
+    <!-- 第四行：导航数据和视频（HLS流） -->
     <el-row :gutter="responsiveGutter" style="margin-top: 20px;">
       <el-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12">
         <el-card header="导航数据" shadow="hover" class="navigation-card">
@@ -372,21 +372,21 @@
       </el-col>
       
       <el-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12">
-        <el-card header="实时视频监控" shadow="hover">
+        <el-card header="实时视频监控（HLS协议）" shadow="hover">
           <div class="video-section">
+            <!-- HLS视频流容器 -->
             <video
               ref="videoEl"
-              src="https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4"
-              :autoplay="videoAutoplay"
               muted
-              loop
               playsinline
               @error="handleVideoError"
               @canplay="handleVideoReady"
+              @play="handleVideoPlay"
+              @pause="handleVideoPause"
             ></video>
             
             <div class="video-overlay">
-              <el-tag type="danger" effect="dark" size="small">LIVE</el-tag>
+              <el-tag type="danger" effect="dark" size="small">LIVE (HLS)</el-tag>
               <span>FPS: {{ fps.toFixed(1) }}</span>
               <span>延迟: {{ networkLatency }}ms</span>
               
@@ -470,6 +470,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElNotification, ElMessage } from 'element-plus'
 import { SuccessFilled } from '@element-plus/icons-vue'
+import Hls from 'hls.js' // 引入HLS解析库
 import { useRobotStore } from '@/stores/robotStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import type { RobotData } from '@/utils/mockSocket'
@@ -482,11 +483,16 @@ const historyStore = useHistoryStore()
 // 响应式状态
 const isMobile = ref(false)
 const isReconnecting = ref(false)
-const videoAutoplay = ref(true)
-const isPlaying = ref(true)
-const isFullscreen = ref(false)
-const fps = ref(30)
-const networkLatency = ref(120)
+const isPlaying = ref(true) // 视频播放状态
+const isFullscreen = ref(false) // 全屏状态
+const fps = ref(30) // 视频帧率
+const networkLatency = ref(120) // 模拟网络延迟
+
+// HLS核心实例
+const videoEl = ref<HTMLVideoElement | null>(null)
+const hlsInstance = ref<Hls | null>(null)
+// 公开的HLS测试流地址（无需本地服务器，直接访问）
+const mockHlsUrl = ref('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')
 
 // 数据状态
 const dateRange = ref<[Date, Date] | null>(null)
@@ -542,6 +548,119 @@ const filteredAlerts = computed(() => {
     .slice(0, 10) // 只显示最近10条
 })
 
+// ========== HLS视频流核心逻辑 ==========
+// 初始化HLS播放器
+const initHlsPlayer = () => {
+  if (!videoEl.value) return
+
+  // 1. 检查浏览器是否支持HLS
+  if (Hls.isSupported()) {
+    hlsInstance.value = new Hls({
+      maxBufferLength: 3, // 减小缓存，降低实时流延迟
+      reconnectDelay: 1000, // 断流后重连延迟（1秒）
+      maxReconnect: 10, // 最大重连次数
+      startLevel: 0 // 从最低清晰度开始加载（加快首屏）
+    })
+
+    // 2. 加载HLS测试流
+    hlsInstance.value.loadSource(mockHlsUrl.value)
+    hlsInstance.value.attachMedia(videoEl.value)
+
+    // 3. 监听HLS事件（模拟真实场景异常）
+    hlsInstance.value.on(Hls.Events.ERROR, (event, data) => {
+      console.error('HLS流错误:', data)
+      // 视觉告警：流异常提示
+      addAlert('error', `视频流异常: ${data.type === 'network' ? '网络断连，正在重连' : '解码错误'}`)
+      
+      // 网络异常自动重连
+      if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        ElMessage.warning('HLS流断连，正在尝试重连...')
+        hlsInstance.value?.startLoad()
+      }
+      // 解码异常重建播放器
+      else if (data.fatal && data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        hlsInstance.value?.recoverMediaError()
+      }
+    })
+
+    // 4. HLS流解析完成，自动播放
+    hlsInstance.value.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoEl.value?.play().catch(() => {
+        ElMessage.warning('自动播放失败（浏览器策略限制），请手动点击播放')
+        isPlaying.value = false
+      })
+    })
+  } 
+  // 兼容Safari/iOS（原生支持HLS）
+  else if (videoEl.value.canPlayType('application/vnd.apple.mpegurl')) {
+    videoEl.value.src = mockHlsUrl.value
+    videoEl.value.play().catch(() => {
+      isPlaying.value = false
+    })
+  } 
+  // 浏览器不支持HLS
+  else {
+    ElMessage.error('当前浏览器不支持HLS协议，无法播放实时视频流')
+    addAlert('error', '浏览器不支持HLS协议，视频流播放失败')
+  }
+}
+
+// 视频播放/暂停切换
+const togglePlay = () => {
+  if (!videoEl.value) return
+
+  if (isPlaying.value) {
+    videoEl.value.pause()
+  } else {
+    videoEl.value.play().catch((e) => {
+      ElMessage.error(`播放失败: ${e.message}`)
+    })
+  }
+}
+
+// 全屏切换
+const toggleFullscreen = () => {
+  if (!videoEl.value) return
+
+  if (!isFullscreen.value) {
+    // 兼容不同浏览器全屏API
+    if (videoEl.value.requestFullscreen) {
+      videoEl.value.requestFullscreen()
+    } else if ((videoEl.value as any).webkitRequestFullscreen) {
+      (videoEl.value as any).webkitRequestFullscreen()
+    } else if ((videoEl.value as any).mozRequestFullScreen) {
+      (videoEl.value as any).mozRequestFullScreen()
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).mozCancelFullScreen) {
+      (document as any).mozCancelFullScreen()
+    }
+  }
+}
+
+// 视频事件监听
+const handleVideoError = () => {
+  ElMessage.error('HLS视频流加载失败，请检查网络或流地址')
+  addAlert('error', '视频流加载失败：无法连接到HLS服务器')
+}
+
+const handleVideoReady = () => {
+  ElMessage.success('HLS视频流准备就绪（验证HLS协议支持）')
+}
+
+const handleVideoPlay = () => {
+  isPlaying.value = true
+}
+
+const handleVideoPause = () => {
+  isPlaying.value = false
+}
+
+// ========== 原有逻辑（传感器/告警/响应式） ==========
 // 初始化响应式检测
 const initResponsive = () => {
   isMobile.value = window.innerWidth < 768
@@ -550,10 +669,7 @@ const initResponsive = () => {
 // 加载告警音频
 const loadAlertAudio = () => {
   try {
-    // 尝试从 assets 文件夹加载
     alertAudio.value = new Audio('/src/assets/alert.mp3')
-    
-    // 如果上述路径失败，尝试备用路径
     alertAudio.value.addEventListener('error', () => {
       console.warn('alert.mp3 not found in assets, trying alternative path')
       alertAudio.value = new Audio('/alert.mp3')
@@ -580,7 +696,6 @@ const playAlertSound = () => {
 // 数据筛选
 const filterData = () => {
   if (!dateRange.value) {
-    // 显示最近20条数据
     const recentData = historyData.value.slice(-20)
     updateFilteredImu(recentData)
   } else {
@@ -626,19 +741,13 @@ const updateFilteredImu = (data: RobotData[]) => {
 // 导出传感器数据
 const exportSensorData = () => {
   try {
-    // 导出加速度数据
     historyStore.exportSensorData(filteredImu.value.accel, 'accel')
-    
-    // 导出陀螺仪数据
     setTimeout(() => {
       historyStore.exportSensorData(filteredImu.value.gyro, 'gyro')
     }, 200)
-    
-    // 导出磁力计数据
     setTimeout(() => {
       historyStore.exportSensorData(filteredImu.value.mag, 'mag')
     }, 400)
-    
     ElMessage.success('传感器数据导出成功')
   } catch (error) {
     console.error('导出失败:', error)
@@ -663,7 +772,6 @@ const exportAlerts = () => {
     ].join(','))
   ].join('\n')
   
-  // 添加UTF-8 BOM头解决中文乱码
   const bom = '\uFEFF'
   const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -687,44 +795,6 @@ const reconnect = async () => {
   } finally {
     isReconnecting.value = false
   }
-}
-
-// 视频控制
-const videoEl = ref<HTMLVideoElement | null>(null)
-const togglePlay = () => {
-  if (videoEl.value) {
-    if (isPlaying.value) {
-      videoEl.value.pause()
-    } else {
-      videoEl.value.play().catch(() => {
-        ElMessage.error('视频播放失败，请检查网络连接')
-      })
-    }
-    isPlaying.value = !isPlaying.value
-  }
-}
-
-const toggleFullscreen = () => {
-  if (!videoEl.value) return
-  
-  if (!isFullscreen.value) {
-    if (videoEl.value.requestFullscreen) {
-      videoEl.value.requestFullscreen()
-    }
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen()
-    }
-  }
-  isFullscreen.value = !isFullscreen.value
-}
-
-const handleVideoError = () => {
-  ElMessage.error('视频流连接失败')
-}
-
-const handleVideoReady = () => {
-  ElMessage.success('视频流准备就绪')
 }
 
 // 告警处理
@@ -759,7 +829,7 @@ const checkNetworkLatency = () => {
 
 // 位置百分比计算
 const getPositionPercentage = (value: number, axis: 'x' | 'y') => {
-  const max = axis === 'x' ? 10 : 10 // 假设最大范围为10米
+  const max = axis === 'x' ? 10 : 10
   return Math.min(100, Math.max(0, ((value + max) / (2 * max)) * 100))
 }
 
@@ -770,7 +840,7 @@ const getPositionColor = (value: number, axis: 'x' | 'y') => {
   return '#67C23A'
 }
 
-// 添加告警（修复视觉告警间隔）
+// 添加告警
 const addAlert = (level: 'error' | 'warning', message: string) => {
   const existing = alerts.value.find(
     alert => alert.message === message && !alert.acknowledged
@@ -797,7 +867,7 @@ const showChartPlayback = () => {
   ElMessage.info('图表回放功能需要在历史数据页面使用')
 }
 
-// 监视数据变化，保存历史记录并更新图表
+// 监视数据变化
 watch(
   () => store.status.timestamp,
   (newTs) => {
@@ -805,31 +875,25 @@ watch(
     
     const currentData = { ...store.status }
     
-    // 保存到历史数据
     historyData.value.push(currentData)
     if (historyData.value.length > 1000) {
       historyData.value.shift()
     }
     
-    // 更新图表数据（保持实时性）
     if (!dateRange.value) {
       const recentData = historyData.value.slice(-20)
       updateFilteredImu(recentData)
     }
     
-    // 检查电池低电量告警（每10秒一次，视觉和听觉同步）
+    // 电池低电量告警
     const now = Date.now()
     if (currentData.battery < 20) {
       const alertKey = `low_battery_${Math.floor(now / ALERT_INTERVAL)}`
       
       if (!batteryAlerts.value.has(alertKey)) {
-        // 播放听觉告警
         playAlertSound()
-        
-        // 添加视觉告警（只在第一次和每10秒一次时）
         addAlert('error', `电池电量过低: ${currentData.battery.toFixed(1)}%`)
         
-        // 保存到历史记录
         historyStore.addRecord({
           timestamp: Date.now(),
           type: 'alert',
@@ -843,11 +907,9 @@ watch(
           }
         })
         
-        // 记录本次告警
         batteryAlerts.value.add(alertKey)
         lastLowBatteryAlert.value = now
         
-        // 显示视觉通知（每10秒一次）
         ElNotification.error({
           title: '低电量警告',
           message: `电池电量过低: ${currentData.battery.toFixed(1)}%`,
@@ -855,11 +917,10 @@ watch(
         })
       }
     } else {
-      // 电量恢复时清空告警记录
       batteryAlerts.value.clear()
     }
     
-    // 检查其他告警条件（这些不需要间隔控制）
+    // 温度告警
     if (currentData.env.temp > 35) {
       addAlert('warning', `温度过高: ${currentData.env.temp.toFixed(1)}℃`)
       
@@ -877,6 +938,7 @@ watch(
       })
     }
     
+    // 避障距离告警
     if (currentData.env.distance < 50) {
       addAlert('warning', `避障距离过近: ${currentData.env.distance.toFixed(1)}cm`)
       
@@ -957,15 +1019,19 @@ watch(() => store.isConnected, (connected) => {
 
 // 生命周期
 onMounted(() => {
+  // 初始化响应式
   initResponsive()
   loadAlertAudio()
   calcFps()
   filterData()
   
-  // 定时检查网络
+  // 初始化HLS播放器
+  initHlsPlayer()
+  
+  // 定时任务
   setInterval(checkNetworkLatency, 5000)
   
-  // 监听窗口大小变化
+  // 监听窗口事件
   window.addEventListener('resize', initResponsive)
   window.addEventListener('fullscreenchange', () => {
     isFullscreen.value = !!document.fullscreenElement
@@ -973,8 +1039,20 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 销毁HLS实例，避免内存泄漏
+  if (hlsInstance.value) {
+    hlsInstance.value.destroy()
+  }
+  if (videoEl.value) {
+    videoEl.value.pause()
+    videoEl.value.src = ''
+  }
+  
+  // 移除事件监听
   window.removeEventListener('resize', initResponsive)
-  window.removeEventListener('fullscreenchange', () => {})
+  window.removeEventListener('fullscreenchange', () => {
+    isFullscreen.value = !!document.fullscreenElement
+  })
 })
 </script>
 
@@ -1155,6 +1233,7 @@ onUnmounted(() => {
   color: #909399;
 }
 
+/* HLS视频样式优化 */
 .video-section {
   position: relative;
   background: #000;
