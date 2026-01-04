@@ -20,6 +20,35 @@
       </el-alert>
     </div>
 
+    <el-row :gutter="responsiveGutter" style="margin-bottom: 20px">
+      <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
+        <el-card class="metric-card" shadow="hover">
+          <div class="metric-title">Pitch（俯仰）</div>
+          <div class="metric-value">
+            {{ store.status.pose?.pitch.toFixed(2) }} °
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
+        <el-card class="metric-card" shadow="hover">
+          <div class="metric-title">Roll（横滚）</div>
+          <div class="metric-value">
+            {{ store.status.pose?.roll.toFixed(2) }} °
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
+        <el-card class="metric-card" shadow="hover">
+          <div class="metric-title">Yaw（偏航）</div>
+          <div class="metric-value">
+            {{ store.status.pose?.yaw.toFixed(2) }} °
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 第一行：关键指标 -->
     <el-row :gutter="responsiveGutter" style="margin-bottom: 20px;">
       <el-col :xs="24" :sm="12" :md="6" :lg="6" :xl="6">

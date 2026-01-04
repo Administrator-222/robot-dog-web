@@ -73,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
         router.push('/')
       }
     } else {
-      ElMessage.error('密码错误，请输入 123456')
+      ElMessage.error('密码错误')
     }
   }
 
