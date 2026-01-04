@@ -38,15 +38,17 @@ app.use(ElementPlus)
 // 全局错误处理中间件
 app.config.errorHandler = (err, instance, info) => {
   console.error('Vue 错误:', err, instance, info)
+
+  const error = err as Error
   
   errorHandler.handleError({
     type: 'system',
     code: 'VUE_ERROR',
-    message: err?.message || '未知Vue错误',
+    message: error?.message || '未知Vue错误',
     data: {
       component: instance?.$options.name,
       info,
-      stack: err?.stack
+      stack: error?.stack
     },
     retryable: false
   })

@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { useRobotStore } from '@/stores/robotStore'
-import { storeToRefs } from 'pinia'
+// import { storeToRefs } from 'pinia'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ElMessage } from 'element-plus'
@@ -79,7 +79,7 @@ const props = defineProps<{
 }>()
 
 const store = useRobotStore()
-const { isPaused } = storeToRefs(store)
+// const { isPaused } = storeToRefs(store)
 const isExecuting = ref(false)
 const isDrawMode = ref(false)
 

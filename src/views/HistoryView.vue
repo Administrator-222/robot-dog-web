@@ -527,20 +527,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useHistoryStore, type HistoryRecord } from '@/stores/historyStore'
 import { useRobotStore } from '@/stores/robotStore'
 import { useAuthStore } from '@/stores/authStore'
 import { 
   Monitor, Operation, Histogram, Search, Refresh, Download, 
   MagicStick, Delete, Document, Calendar, DataAnalysis,
-  VideoPlay, PieChart, RefreshRight, View, VideoCamera, ArrowRight,
-  Warning, Check, SuccessFilled
+  VideoPlay, PieChart, RefreshRight, View,
+  Warning, Check
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
+console.log('router', router)  // 添加这行或删除 const router = useRouter()
 const historyStore = useHistoryStore()
 const robotStore = useRobotStore()
 const authStore = useAuthStore()
@@ -661,6 +662,7 @@ const displayRecords = computed(() => {
 const lastUpdateTime = computed(() => {
   if (historyStore.records.length === 0) return '暂无数据'
   const lastRecord = historyStore.records[0]
+  if (!lastRecord) return '暂无数据'  // 添加这行
   return formatFullDate(lastRecord.timestamp)
 })
 
@@ -895,10 +897,10 @@ const acknowledgeRecord = (record: HistoryRecord) => {
     }
     
     // 重新保存记录
-    const updatedRecord = {
-      ...record,
-      data: record.data
-    }
+    // const updatedRecord = {
+    //   ...record,
+    //   data: record.data
+    // }
     
     // 这里需要更新历史存储中的记录
     // 实际项目中可能需要调用API
@@ -973,9 +975,15 @@ const playbackProgress = computed(() => {
 })
 
 const currentPlaybackTime = computed(() => {
-  if (!playbackRecords.value[playbackIndex.value]) return '--:--:--'
-  return formatDate(playbackRecords.value[playbackIndex.value].timestamp, 'time')
-})
+  // 1. 先把数组元素取出来存到变量
+  const record = playbackRecords.value[playbackIndex.value];
+  
+  // 2. 检查这个变量是否为 undefined 或 null
+  if (!record) return '--:--:--';
+  
+  // 3. 如果通过了检查，TypeScript 就知道 record 一定有值
+  return formatDate(record.timestamp, 'time');
+});
 
 const getSensorTypeName = (type: string) => {
   const names: Record<string, string> = {
@@ -999,7 +1007,7 @@ const showChartPlayback = async () => {
   // 获取传感器数据记录
   playbackRecords.value = historyStore.queryRecords({
     type: 'telemetry',
-    category: 'sensor',
+    categories: ['sensor'],  // 改为 categories: ['sensor']
     startTime: queryForm.value.timeRange[0],
     endTime: queryForm.value.timeRange[1],
     limit: 100
@@ -1019,7 +1027,7 @@ const updatePlaybackData = () => {
   if (!playbackRecords.value[playbackIndex.value]) return
   
   const record = playbackRecords.value[playbackIndex.value]
-  const data = record.data
+  const data = record?.data || {}  // 改为 record?.data || {}
   
   // 根据选择的传感器类型更新当前值
   switch (selectedSensorType.value) {

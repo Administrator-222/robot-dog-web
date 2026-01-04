@@ -51,7 +51,7 @@ export class GlobalErrorHandler {
         type: 'system',
         code: 'UNCAUGHT_ERROR',
         message: event.message,
-        timestamp: Date.now(),
+        // timestamp: Date.now(),
         data: {
           filename: event.filename,
           lineno: event.lineno,
@@ -67,7 +67,7 @@ export class GlobalErrorHandler {
         type: 'system',
         code: 'UNHANDLED_REJECTION',
         message: event.reason?.message || 'Promise rejected',
-        timestamp: Date.now(),
+        // timestamp: Date.now(),
         data: { reason: event.reason },
         retryable: false
       })

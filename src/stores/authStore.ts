@@ -93,7 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
         const parsed = JSON.parse(stored)
         // 确保权限存在
         if (!parsed.permissions) {
-          parsed.permissions = PERMISSIONS[parsed.role] || []
+          parsed.permissions = PERMISSIONS[parsed.role as Role] || []
         }
         user.value = parsed
       } catch (error) {

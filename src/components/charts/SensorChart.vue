@@ -98,6 +98,14 @@ const legendItems = computed(() => [
   { name: 'Z轴', color: '#F56C6C' }
 ])
 
+// 在 legendItems 定义之后添加这个计算属性
+const displayData = computed(() => {
+  if (isPlaying.value && historicalData.value.length > 0 && historicalData.value[playbackIndex.value]) {
+    return historicalData.value[playbackIndex.value];
+  }
+  return props.data;
+});
+
 // 检查设备类型
 const checkDevice = () => {
   isMobile.value = window.innerWidth < 768
@@ -108,15 +116,15 @@ const initChart = () => {
   if (!chartRef.value) return
   myChart = echarts.init(chartRef.value)
   
-  const displayData = isPlaying.value && historicalData.value.length > 0 
-    ? historicalData.value[playbackIndex.value] 
-    : props.data
+  //const displayData = isPlaying.value && historicalData.value.length > 0 
+  //  ? historicalData.value[playbackIndex.value] 
+  //  : props.data
 
   const series: any[] = [
     {
       name: 'X轴',
       type: 'line',
-      data: displayData.x,
+      data: displayData.value.x,
       smooth: true,
       showSymbol: false,
       lineStyle: { width: isMobile.value ? 2 : 3 },
@@ -131,7 +139,7 @@ const initChart = () => {
     {
       name: 'Y轴',
       type: 'line',
-      data: displayData.y,
+      data: displayData.value.y,
       smooth: true,
       showSymbol: false,
       lineStyle: { width: isMobile.value ? 2 : 3 },
@@ -146,7 +154,7 @@ const initChart = () => {
     {
       name: 'Z轴',
       type: 'line',
-      data: displayData.z,
+      data: displayData.value.z,
       smooth: true,
       showSymbol: false,
       lineStyle: { width: isMobile.value ? 2 : 3 },
@@ -190,7 +198,7 @@ const initChart = () => {
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
-        const time = displayData.labels[params[0].dataIndex] || '--:--:--'
+        const time = displayData.value.labels[params[0].dataIndex] || '--:--:--'
         let tip = `<div style="font-weight: bold; margin-bottom: 5px;">${time}</div>`
         params.forEach((item: any) => {
           const val = item.value !== null && item.value !== undefined 
@@ -221,7 +229,7 @@ const initChart = () => {
     xAxis: { 
       type: 'category', 
       boundaryGap: false, 
-      data: displayData.labels,
+      data: displayData.value.labels,
       axisLabel: { fontSize: isMobile.value ? 10 : 12 }
     },
     yAxis: {

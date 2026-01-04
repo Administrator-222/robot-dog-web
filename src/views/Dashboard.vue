@@ -336,7 +336,7 @@
                 <div class="axis-progress">
                   <el-progress 
                     :percentage="getPositionPercentage(store.status.position[0], 'x')"
-                    :color="getPositionColor(store.status.position[0], 'x')"
+                    :color="getPositionColor(store.status.position[0])"
                     :show-text="false"
                   />
                 </div>
@@ -347,7 +347,7 @@
                 <div class="axis-progress">
                   <el-progress 
                     :percentage="getPositionPercentage(store.status.position[1], 'y')"
-                    :color="getPositionColor(store.status.position[1], 'y')"
+                    :color="getPositionColor(store.status.position[1])"
                     :show-text="false"
                   />
                 </div>
@@ -477,6 +477,14 @@ import type { RobotData } from '@/utils/mockSocket'
 import GaugeBoard from '@/components/charts/GaugeBoard.vue'
 import SensorChart from '@/components/charts/SensorChart.vue'
 
+// 在已有的 import 语句下面添加
+interface SensorDataType {
+  x: number[]
+  y: number[]
+  z: number[]
+  labels: string[]
+}
+
 const store = useRobotStore()
 const historyStore = useHistoryStore()
 
@@ -496,7 +504,11 @@ const mockHlsUrl = ref('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')
 
 // 数据状态
 const dateRange = ref<[Date, Date] | null>(null)
-const filteredImu = ref({
+const filteredImu = ref<{
+  accel: SensorDataType
+  gyro: SensorDataType
+  mag: SensorDataType
+}>({
   accel: { x: [], y: [], z: [], labels: [] },
   gyro: { x: [], y: [], z: [], labels: [] },
   mag: { x: [], y: [], z: [], labels: [] }
@@ -557,8 +569,8 @@ const initHlsPlayer = () => {
   if (Hls.isSupported()) {
     hlsInstance.value = new Hls({
       maxBufferLength: 3, // 减小缓存，降低实时流延迟
-      reconnectDelay: 1000, // 断流后重连延迟（1秒）
-      maxReconnect: 10, // 最大重连次数
+      // reconnectDelay: 1000, // 断流后重连延迟（1秒）
+      // maxReconnect: 10, // 最大重连次数
       startLevel: 0 // 从最低清晰度开始加载（加快首屏）
     })
 
@@ -567,7 +579,7 @@ const initHlsPlayer = () => {
     hlsInstance.value.attachMedia(videoEl.value)
 
     // 3. 监听HLS事件（模拟真实场景异常）
-    hlsInstance.value.on(Hls.Events.ERROR, (event, data) => {
+    hlsInstance.value.on(Hls.Events.ERROR, (_event: any, data: any) => {
       console.error('HLS流错误:', data)
       // 视觉告警：流异常提示
       addAlert('error', `视频流异常: ${data.type === 'network' ? '网络断连，正在重连' : '解码错误'}`)
@@ -833,7 +845,7 @@ const getPositionPercentage = (value: number, axis: 'x' | 'y') => {
   return Math.min(100, Math.max(0, ((value + max) / (2 * max)) * 100))
 }
 
-const getPositionColor = (value: number, axis: 'x' | 'y') => {
+const getPositionColor = (value: number) => {
   const absValue = Math.abs(value)
   if (absValue > 8) return '#F56C6C'
   if (absValue > 5) return '#E6A23C'

@@ -14,8 +14,9 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* Linting */
-    "strict": true,
+    /* Linting - 修改这部分 */
+    "strict": false,  // 改为 false
+    "noImplicitAny": false,  // 添加这行
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

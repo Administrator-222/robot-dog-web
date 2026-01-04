@@ -312,7 +312,7 @@ import {
   Plus, 
   List, 
   Download,
-  Delete
+  // Delete
 } from '@element-plus/icons-vue'
 import PathMap from '@/components/control/PathMap.vue'
 

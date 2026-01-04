@@ -335,7 +335,7 @@ export const useHistoryStore = defineStore('history', () => {
   // 图表回放数据准备
   const preparePlaybackData = (category: string, startTime?: Date, endTime?: Date): SensorData => {
     const filtered = queryRecords({
-      category,
+      categories: [category],  // 将 category 改为 categories: [category]
       startTime,
       endTime,
       type: 'telemetry'
